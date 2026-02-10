@@ -59,7 +59,6 @@ func handleCommand(connection net.Conn) {
 
 		commands := strings.Split(commandsString, ";")
 
-		fmt.Printf("Ricevuto batch di %d comandi: %v\n", len(commands), commands)
 		var results []string
 		for _, cmd := range commands {
 			cmd = strings.TrimSpace(cmd)
