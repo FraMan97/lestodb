@@ -26,6 +26,13 @@ func main() {
 
 	storage.NewStorage(repo, env.SHARDING_COUNT)
 
+	log.Println("Loading data from BoltDB...")
+	if err := storage.DB.LoadFromDatabase(); err != nil {
+		log.Printf("Warning: failed to load initial data: %v\n", err)
+	} else {
+		log.Println("Initial data loaded successfully")
+	}
+
 	log.Println("Server is listening on " + fmt.Sprintf("%s:%d", env.URL, env.PORT))
 	l, err := net.Listen("tcp", fmt.Sprintf(":%d", env.PORT))
 	if err != nil {
@@ -84,7 +91,7 @@ func cleanTTLValues() {
 		now := time.Now().Unix()
 		storage.DB.Sharding[shard].Lock()
 		for key, val := range storage.DB.Data[shard] {
-			if now >= val.ExpiredAt {
+			if val.ExpiredAt != 0 && now >= val.ExpiredAt {
 				delete(storage.DB.Data[shard], key)
 			}
 		}

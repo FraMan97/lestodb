@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"hash/fnv"
 	"sync"
 
 	"github.com/FraMan97/lestodb/internal/database"
@@ -31,4 +32,26 @@ func NewStorage(bd database.EntryRecordRepository, shardsCount int) {
 		DB.Data[i] = make(map[string]*Entry)
 		DB.Sharding[i] = &sync.RWMutex{}
 	}
+}
+
+func (s *Storage) LoadFromDatabase() error {
+	records, err := s.BackupDatabase.GetAll()
+	if err != nil {
+		return err
+	}
+
+	for _, record := range records {
+		h := fnv.New32a()
+		h.Write([]byte(record.Key))
+		index := int(h.Sum32()) % len(s.Data)
+
+		s.Sharding[index].Lock()
+		s.Data[index][record.Key] = &Entry{
+			Value:     record.Value,
+			Ttl:       0,
+			ExpiredAt: 0,
+		}
+		s.Sharding[index].Unlock()
+	}
+	return nil
 }

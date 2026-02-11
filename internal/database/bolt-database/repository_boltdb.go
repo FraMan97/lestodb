@@ -55,3 +55,31 @@ func (r *BoltEntryRepository) Get(key string) (*database.EntryRecord, error) {
 
 	return entry, nil
 }
+
+func (r *BoltEntryRepository) GetAll() ([]database.EntryRecord, error) {
+	var entries []database.EntryRecord
+
+	err := r.db.View(func(tx *bbolt.Tx) error {
+		b := tx.Bucket([]byte(DefaultBucket))
+		if b == nil {
+			return fmt.Errorf("bucket %s not found", DefaultBucket)
+		}
+
+		c := b.Cursor()
+
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			entries = append(entries, database.EntryRecord{
+				Key:   string(k),
+				Value: string(v),
+			})
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return entries, nil
+}
