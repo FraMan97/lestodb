@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"log"
-	"math/rand/v2"
 	"net"
 	"strings"
 	"time"
@@ -86,16 +85,27 @@ func handleCommand(connection net.Conn) {
 }
 
 func cleanTTLValues() {
+	currentShard := 0
+
 	for {
-		shard := rand.IntN(env.SHARDING_COUNT)
 		now := time.Now().Unix()
-		storage.DB.Sharding[shard].Lock()
-		for key, val := range storage.DB.Data[shard] {
+
+		shardIndex := currentShard % env.SHARDING_COUNT
+
+		storage.DB.Sharding[shardIndex].Lock()
+		for key, val := range storage.DB.Data[shardIndex] {
 			if val.ExpiredAt != 0 && now >= val.ExpiredAt {
-				delete(storage.DB.Data[shard], key)
+				delete(storage.DB.Data[shardIndex], key)
 			}
 		}
-		storage.DB.Sharding[shard].Unlock()
-		time.Sleep(time.Second * 1)
+		storage.DB.Sharding[shardIndex].Unlock()
+
+		currentShard++
+
+		if currentShard >= env.SHARDING_COUNT {
+			currentShard = 0
+		}
+
+		time.Sleep(time.Millisecond * 100)
 	}
 }
